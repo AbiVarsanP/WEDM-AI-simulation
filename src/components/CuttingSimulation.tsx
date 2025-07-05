@@ -190,13 +190,6 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     return cuttingPath3D[cuttingPath3D.length - 1];
   }
 
-  const resetSimulation = () => {
-    cutProgress.current = 0;
-    setIsComplete(false);
-    setShowCutPiece(false);
-    sparkParticles.current = [];
-  };
-
   // Mouse event handlers for improved 3D controls
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDragging(true);
@@ -241,6 +234,13 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     const zoomSensitivity = 0.1;
     const newDistance = Math.max(200, Math.min(800, cameraDistance + e.deltaY * zoomSensitivity));
     setCameraDistance(newDistance);
+  };
+
+  const resetSimulation = () => {
+    cutProgress.current = 0;
+    setIsComplete(false);
+    setShowCutPiece(false);
+    sparkParticles.current = [];
   };
 
   useEffect(() => {
@@ -516,22 +516,27 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         ctx.shadowBlur = 0;
       }
 
-      // Enhanced 3D statistics panel
-      const panelGradient = ctx.createLinearGradient(520, 40, 520, 220);
+      // Enhanced 3D statistics panel - responsive positioning
+      const panelWidth = Math.min(260, canvas.width * 0.32);
+      const panelHeight = 180;
+      const panelX = canvas.width - panelWidth - 20;
+      const panelY = 40;
+
+      const panelGradient = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
       panelGradient.addColorStop(0, 'rgba(15, 23, 42, 0.95)');
       panelGradient.addColorStop(1, 'rgba(30, 41, 59, 0.95)');
       ctx.fillStyle = panelGradient;
-      ctx.fillRect(520, 40, 260, 180);
+      ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 2;
-      ctx.strokeRect(520, 40, 260, 180);
+      ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
       // 3D Statistics
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px monospace';
-      ctx.fillText('3D CUTTING ANALYSIS', 530, 60);
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('3D CUTTING ANALYSIS', panelX + 10, panelY + 20);
       
-      ctx.font = '11px monospace';
+      ctx.font = '10px monospace';
       const stats3D = [
         `3D Position: (${currentPos3D.x.toFixed(0)}, ${currentPos3D.y.toFixed(0)}, ${currentPos3D.z.toFixed(0)})`,
         `Cut Depth: ${(cutProgress.current * 0.6).toFixed(1)} mm`,
@@ -546,7 +551,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       stats3D.forEach((stat, index) => {
         const colors = ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb7185', '#10b981', '#06b6d4'];
         ctx.fillStyle = colors[index % colors.length];
-        ctx.fillText(stat, 530, 80 + index * 14);
+        ctx.fillText(stat, panelX + 10, panelY + 40 + index * 14);
       });
 
       animationRef.current = requestAnimationFrame(animate);
@@ -587,17 +592,17 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-          <Move3D className="w-6 h-6 text-blue-400" />
+    <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
+        <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+          <Move3D className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
           3D Wire EDM Cutting Simulation
         </h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={onToggleSimulation}
             disabled={isComplete}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            className={`px-3 sm:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm ${
               isComplete
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 : isRunning 
@@ -610,14 +615,14 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
           </button>
           <button
             onClick={onStopSimulation}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+            className="px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 transition-colors text-sm"
           >
             <Square className="w-4 h-4" />
             Stop
           </button>
           <button
             onClick={handleReset}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+            className="px-3 sm:px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors text-sm"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
@@ -625,16 +630,16 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         </div>
       </div>
 
-      {/* Enhanced 3D Controls */}
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Enhanced 3D Controls - Mobile Responsive */}
+      <div className="mb-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">3D Shape:</label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 sm:flex gap-2">
             {Object.keys(shapes3D).map((shape) => (
               <button
                 key={shape}
                 onClick={() => handleShapeChange(shape as keyof typeof shapes3D)}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
+                className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors ${
                   currentShape === shape
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -648,7 +653,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">Camera Controls:</label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handleCameraControl('x', -0.1)}
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
@@ -679,7 +684,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
             </button>
             <button
               onClick={resetCamera}
-              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
+              className="px-2 sm:px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
               title="Reset Camera"
             >
               Reset
@@ -689,16 +694,16 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">View Options:</label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <button
               onClick={() => setAutoRotate(!autoRotate)}
-              className={`px-3 py-1 rounded text-sm transition-colors flex items-center gap-1 ${
+              className={`px-2 sm:px-3 py-1 rounded text-sm transition-colors flex items-center gap-1 ${
                 autoRotate ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'
               }`}
               title="Toggle Auto Rotation"
             >
               <RotateCw className="w-4 h-4" />
-              Auto
+              <span className="hidden sm:inline">Auto</span>
             </button>
             <div className="text-xs text-gray-400 flex items-center">
               Zoom: {Math.round((800 - cameraDistance) / 6)}%
@@ -709,7 +714,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
 
       {/* Instructions */}
       <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
-        <div className="text-sm text-gray-300">
+        <div className="text-xs sm:text-sm text-gray-300">
           <strong>Mouse Controls:</strong> Click and drag to rotate • Scroll wheel to zoom • 
           Manual controls disable auto-rotation
         </div>
@@ -720,7 +725,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
           ref={canvasRef}
           width={800}
           height={400}
-          className={`w-full h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`w-full h-auto ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -729,26 +734,26 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         />
       </div>
       
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-        <div className="bg-gray-700 p-3 rounded">
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
+        <div className="bg-gray-700 p-2 sm:p-3 rounded">
           <div className="text-gray-300 mb-1">3D Cutting Status</div>
           <div className={`font-medium ${isComplete ? 'text-green-400' : isRunning ? 'text-blue-400' : 'text-yellow-400'}`}>
             {isComplete ? '3D Complete' : isRunning ? '3D Cutting' : '3D Ready'}
           </div>
         </div>
-        <div className="bg-gray-700 p-3 rounded">
+        <div className="bg-gray-700 p-2 sm:p-3 rounded">
           <div className="text-gray-300 mb-1">3D Complexity</div>
           <div className="text-purple-400 font-mono">
             {currentShape === 'circle' ? 'High' : currentShape === 'star' ? 'Very High' : currentShape === 'hexagon' ? 'Medium' : 'Low'}
           </div>
         </div>
-        <div className="bg-gray-700 p-3 rounded">
+        <div className="bg-gray-700 p-2 sm:p-3 rounded">
           <div className="text-gray-300 mb-1">Volume Removed</div>
           <div className="text-orange-400 font-mono">
             {(cutProgress.current * 2.5).toFixed(1)} mm³
           </div>
         </div>
-        <div className="bg-gray-700 p-3 rounded">
+        <div className="bg-gray-700 p-2 sm:p-3 rounded">
           <div className="text-gray-300 mb-1">3D Precision</div>
           <div className="text-cyan-400 font-mono">
             ±{(0.01 + parameters.sparkGap * 100).toFixed(3)} mm

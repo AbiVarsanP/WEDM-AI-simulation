@@ -74,9 +74,9 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ predictions, currentParamet
   };
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        <TrendingUp className="w-6 h-6 text-green-400" />
+    <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+      <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
+        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
         Prediction Results
       </h3>
 
@@ -85,22 +85,22 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ predictions, currentParamet
           Train an AI model to see predictions
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {metrics.map(({ key, label, unit, icon: Icon, color, bgColor }) => (
-            <div key={key} className={`p-4 rounded-lg ${bgColor} border border-gray-600`}>
-              <div className="flex items-center justify-between mb-3">
+            <div key={key} className={`p-3 sm:p-4 rounded-lg ${bgColor} border border-gray-600`}>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-2">
                 <div className="flex items-center gap-2">
-                  <Icon className={`w-5 h-5 ${color}`} />
-                  <span className="font-medium text-white">{label}</span>
+                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} />
+                  <span className="font-medium text-white text-sm sm:text-base">{label}</span>
                 </div>
                 <span className="text-xs text-gray-400">Best: {getBestModel(key)}</span>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                 {Object.entries(predictions).map(([model, prediction]) => (
                   <div key={model} className="bg-gray-700/50 p-2 rounded">
                     <div className="text-xs text-gray-400 mb-1">{model}</div>
-                    <div className="font-mono text-sm text-white">
+                    <div className="font-mono text-xs sm:text-sm text-white">
                       {prediction[key].toFixed(2)} {unit}
                     </div>
                   </div>
@@ -109,9 +109,9 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ predictions, currentParamet
             </div>
           ))}
 
-          <div className="bg-gray-700 p-4 rounded-lg">
-            <h4 className="font-medium text-white mb-3">Current Parameter Impact</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="bg-gray-700 p-3 sm:p-4 rounded-lg">
+            <h4 className="font-medium text-white mb-3 text-sm sm:text-base">Current Parameter Impact</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
               <div>
                 <span className="text-gray-400">Voltage Impact:</span>
                 <div className="w-full bg-gray-600 rounded-full h-2 mt-1">

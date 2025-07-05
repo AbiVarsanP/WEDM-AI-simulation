@@ -30,20 +30,20 @@ const ParameterPanel: React.FC<ParameterPanelProps> = ({ parameters, onParameter
   ] as const;
 
   return (
-    <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        <Gauge className="w-6 h-6 text-blue-400" />
+    <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+      <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
+        <Gauge className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
         EDM Parameters
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {parameterConfigs.map(({ key, label, min, max, step, icon: Icon, color }) => (
           <div key={key} className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                <Icon className={`w-4 h-4 ${color}`} />
-                {label}
+              <label className="text-xs sm:text-sm font-medium text-gray-300 flex items-center gap-2">
+                <Icon className={`w-3 h-3 sm:w-4 sm:h-4 ${color}`} />
+                <span className="truncate">{label}</span>
               </label>
-              <span className="text-sm font-mono text-white bg-gray-700 px-2 py-1 rounded">
+              <span className="text-xs sm:text-sm font-mono text-white bg-gray-700 px-2 py-1 rounded min-w-0 flex-shrink-0">
                 {parameters[key]}
               </span>
             </div>

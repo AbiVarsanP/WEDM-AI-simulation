@@ -114,43 +114,45 @@ function App() {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="bg-gray-800 shadow-lg border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Zap className="w-6 h-6 text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Wire EDM Simulator</h1>
-                <p className="text-gray-400">Advanced Machining Process Simulation & AI Analysis</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">Wire EDM Simulator</h1>
+                <p className="text-sm sm:text-base text-gray-400 hidden sm:block">Advanced Machining Process Simulation & AI Analysis</p>
+                <p className="text-xs text-gray-400 sm:hidden">AI-Powered EDM Analysis</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className={`w-3 h-3 rounded-full ${isSimulationRunning ? 'bg-green-400' : 'bg-gray-600'}`} />
-              <span className="text-sm text-gray-400">
-                {isSimulationRunning ? 'Simulation Running' : 'Simulation Stopped'}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${isSimulationRunning ? 'bg-green-400' : 'bg-gray-600'}`} />
+              <span className="text-xs sm:text-sm text-gray-400">
+                {isSimulationRunning ? 'Running' : 'Stopped'}
               </span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <nav className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-1">
+      {/* Navigation Tabs - Scrollable on mobile */}
+      <nav className="bg-gray-800 border-b border-gray-700 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                className={`flex-shrink-0 px-4 sm:px-6 py-3 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                   activeTab === id
                     ? 'bg-gray-900 text-blue-400 border-b-2 border-blue-400'
                     : 'text-gray-400 hover:text-white hover:bg-gray-700'
                 }`}
               >
                 <Icon className="w-4 h-4 inline mr-2" />
-                {label}
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{label.split(' ')[0]}</span>
               </button>
             ))}
           </div>
@@ -158,60 +160,60 @@ function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="space-y-6 sm:space-y-8">
           {activeTab === 'parameters' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
               <ParameterPanel
                 parameters={parameters}
                 onParameterChange={handleParameterChange}
               />
-              <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-                <h3 className="text-xl font-bold text-white mb-6">Process Overview</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+              <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Process Overview</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Discharge Energy</span>
                     <span className="font-mono text-blue-400">
                       {processMetrics.dischargeEnergy.toFixed(2)} mJ
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Duty Cycle</span>
                     <span className="font-mono text-green-400">
                       {processMetrics.dutyCycle.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Power Consumption</span>
                     <span className="font-mono text-yellow-400">
                       {processMetrics.powerConsumption.toFixed(2)} kW
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Material Removal Rate</span>
                     <span className="font-mono text-purple-400">
                       {processMetrics.materialRemovalRate.toFixed(2)} mm³/min
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Surface Roughness</span>
                     <span className="font-mono text-cyan-400">
                       {processMetrics.surfaceRoughness.toFixed(2)} Ra
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Wire Wear Rate</span>
                     <span className="font-mono text-red-400">
                       {processMetrics.wireWearRate.toFixed(3)} %/min
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Process Efficiency</span>
                     <span className="font-mono text-emerald-400">
                       {processMetrics.efficiency.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-700 rounded">
+                  <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Estimated Cost/Hour</span>
                     <span className="font-mono text-orange-400">
                       ${processMetrics.estimatedCostPerHour.toFixed(2)}
@@ -220,11 +222,11 @@ function App() {
                 </div>
                 
                 {/* Process Quality Indicators */}
-                <div className="mt-6">
-                  <h4 className="text-lg font-semibold text-white mb-4">Quality Indicators</h4>
+                <div className="mt-4 sm:mt-6">
+                  <h4 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Quality Indicators</h4>
                   <div className="space-y-3">
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-xs sm:text-sm mb-1">
                         <span className="text-gray-300">Cutting Precision</span>
                         <span className="text-blue-400">{Math.min(100, 100 - processMetrics.wireWearRate * 10).toFixed(0)}%</span>
                       </div>
@@ -236,7 +238,7 @@ function App() {
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-xs sm:text-sm mb-1">
                         <span className="text-gray-300">Surface Quality</span>
                         <span className="text-green-400">{Math.max(0, 100 - processMetrics.surfaceRoughness * 15).toFixed(0)}%</span>
                       </div>
@@ -248,7 +250,7 @@ function App() {
                       </div>
                     </div>
                     <div>
-                      <div className="flex justify-between text-sm mb-1">
+                      <div className="flex justify-between text-xs sm:text-sm mb-1">
                         <span className="text-gray-300">Energy Efficiency</span>
                         <span className="text-yellow-400">{Math.min(100, processMetrics.efficiency).toFixed(0)}%</span>
                       </div>
@@ -275,13 +277,13 @@ function App() {
           )}
 
           {activeTab === 'ai' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
               <AIModelPanel
                 onTrainModel={handleTrainModel}
                 trainingResults={trainedModels}
               />
-              <div className="bg-gray-800 p-6 rounded-lg shadow-xl">
-                <h3 className="text-xl font-bold text-white mb-6">Model Comparison</h3>
+              <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Model Comparison</h3>
                 {Object.keys(trainedModels).length === 0 ? (
                   <div className="text-gray-400 text-center py-8">
                     No models trained yet
@@ -289,10 +291,10 @@ function App() {
                 ) : (
                   <div className="space-y-4">
                     {Object.entries(trainedModels).map(([modelType, model]) => (
-                      <div key={modelType} className="p-4 bg-gray-700 rounded-lg">
+                      <div key={modelType} className="p-3 sm:p-4 bg-gray-700 rounded-lg">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium text-white">{modelType}</span>
-                          <span className="text-sm text-green-400">
+                          <span className="font-medium text-white text-sm sm:text-base">{modelType}</span>
+                          <span className="text-xs sm:text-sm text-green-400">
                             {(model.accuracy * 100).toFixed(1)}% accuracy
                           </span>
                         </div>
