@@ -37,10 +37,15 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
   const [showCutPiece, setShowCutPiece] = useState(false);
   const [cameraAngle, setCameraAngle] = useState({ x: 0.3, y: 0.5, z: 0 });
   const [autoRotate, setAutoRotate] = useState(true);
+  
+  // Mouse control states
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const [cameraDistance, setCameraDistance] = useState(400);
 
   // 3D Camera and projection settings
   const camera = {
-    distance: 400,
+    distance: cameraDistance,
     fov: 60,
     near: 1,
     far: 1000
@@ -192,6 +197,52 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     sparkParticles.current = [];
   };
 
+  // Mouse event handlers for improved 3D controls
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDragging(true);
+    setAutoRotate(false); // Disable auto-rotate when user starts dragging
+    const rect = e.currentTarget.getBoundingClientRect();
+    setLastMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentMousePos = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+
+    const deltaX = currentMousePos.x - lastMousePos.x;
+    const deltaY = currentMousePos.y - lastMousePos.y;
+
+    // Adjust sensitivity for smoother control
+    const sensitivity = 0.005;
+
+    setCameraAngle(prev => ({
+      ...prev,
+      y: prev.y + deltaX * sensitivity,
+      x: prev.x + deltaY * sensitivity
+    }));
+
+    setLastMousePos(currentMousePos);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const zoomSensitivity = 0.1;
+    const newDistance = Math.max(200, Math.min(800, cameraDistance + e.deltaY * zoomSensitivity));
+    setCameraDistance(newDistance);
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -200,11 +251,11 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     if (!ctx) return;
 
     const animate = () => {
-      // Auto-rotate camera
+      // Slower auto-rotate camera (reduced speed by 5x)
       if (autoRotate) {
         setCameraAngle(prev => ({
           ...prev,
-          y: prev.y + 0.005
+          y: prev.y + 0.001 // Reduced from 0.005 to 0.001
         }));
       }
 
@@ -508,7 +559,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isRunning, parameters, isComplete, showCutPiece, currentShape, cuttingPath3D, totalPathLength, cameraAngle, autoRotate]);
+  }, [isRunning, parameters, isComplete, showCutPiece, currentShape, cuttingPath3D, totalPathLength, cameraAngle, autoRotate, cameraDistance]);
 
   const handleReset = () => {
     resetSimulation();
@@ -526,6 +577,13 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       ...prev,
       [axis]: prev[axis] + delta
     }));
+    setAutoRotate(false); // Disable auto-rotate when using manual controls
+  };
+
+  const resetCamera = () => {
+    setCameraAngle({ x: 0.3, y: 0.5, z: 0 });
+    setCameraDistance(400);
+    setAutoRotate(true);
   };
 
   return (
@@ -567,8 +625,8 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         </div>
       </div>
 
-      {/* 3D Controls */}
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Enhanced 3D Controls */}
+      <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">3D Shape:</label>
           <div className="flex gap-2">
@@ -589,41 +647,71 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">3D Camera Controls:</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Camera Controls:</label>
           <div className="flex gap-2">
             <button
               onClick={() => handleCameraControl('x', -0.1)}
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+              title="Rotate Up"
             >
               ↑
             </button>
             <button
               onClick={() => handleCameraControl('x', 0.1)}
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+              title="Rotate Down"
             >
               ↓
             </button>
             <button
               onClick={() => handleCameraControl('y', -0.1)}
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+              title="Rotate Left"
             >
               ←
             </button>
             <button
               onClick={() => handleCameraControl('y', 0.1)}
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+              title="Rotate Right"
             >
               →
             </button>
             <button
-              onClick={() => setAutoRotate(!autoRotate)}
-              className={`px-3 py-1 rounded text-sm transition-colors ${
-                autoRotate ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'
-              }`}
+              onClick={resetCamera}
+              className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm"
+              title="Reset Camera"
             >
-              <RotateCw className="w-4 h-4" />
+              Reset
             </button>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">View Options:</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAutoRotate(!autoRotate)}
+              className={`px-3 py-1 rounded text-sm transition-colors flex items-center gap-1 ${
+                autoRotate ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300'
+              }`}
+              title="Toggle Auto Rotation"
+            >
+              <RotateCw className="w-4 h-4" />
+              Auto
+            </button>
+            <div className="text-xs text-gray-400 flex items-center">
+              Zoom: {Math.round((800 - cameraDistance) / 6)}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
+        <div className="text-sm text-gray-300">
+          <strong>Mouse Controls:</strong> Click and drag to rotate • Scroll wheel to zoom • 
+          Manual controls disable auto-rotation
         </div>
       </div>
       
@@ -632,19 +720,12 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
           ref={canvasRef}
           width={800}
           height={400}
-          className="w-full h-full cursor-move"
-          onMouseMove={(e) => {
-            if (e.buttons === 1) { // Left mouse button held
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = (e.clientX - rect.left) / rect.width;
-              const y = (e.clientY - rect.top) / rect.height;
-              setCameraAngle(prev => ({
-                ...prev,
-                y: prev.y + (x - 0.5) * 0.02,
-                x: prev.x + (y - 0.5) * 0.02
-              }));
-            }
-          }}
+          className={`w-full h-full ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
         />
       </div>
       
