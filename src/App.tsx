@@ -7,26 +7,32 @@ import ResultsPanel from './components/ResultsPanel';
 import { trainSVM, trainANN, trainELM, trainGA, ModelResult } from './utils/aiModels';
 
 interface EDMParameters {
-  voltage: number;
-  current: number;
-  pulseOnTime: number;
-  pulseOffTime: number;
-  wireSpeed: number;
-  dielectricFlow: number;
-  wireOffset: number;
-  sparkGap: number;
+  material: string;
+  grade: string;
+  thickness: number;
+  laserPower: number;
+  speed: number;
+  gasAndPressure: string;
+  surfaceRoughness: number;
+  deviation: number;
+  kerfTaper: number;
+  hazDepth: number;
+  linearEnergy: number;
 }
 
 function App() {
   const [parameters, setParameters] = useState<EDMParameters>({
-    voltage: 150,
-    current: 25,
-    pulseOnTime: 50,
-    pulseOffTime: 100,
-    wireSpeed: 250,
-    dielectricFlow: 10,
-    wireOffset: 2.5,
-    sparkGap: 0.05,
+    material: 'Mild Steel',
+    grade: 'S355JR',
+    thickness: 4,
+    laserPower: 3.0,
+    speed: 2900,
+    gasAndPressure: 'O₂ @ 0.40 bar',
+    surfaceRoughness: 1.3,
+    deviation: 0.225,
+    kerfTaper: 0.03,
+    hazDepth: 33,
+    linearEnergy: 62.07,
   });
 
   const [isSimulationRunning, setIsSimulationRunning] = useState(false);
@@ -36,23 +42,23 @@ function App() {
 
   // Calculate process metrics based on current parameters
   const processMetrics = useMemo(() => {
-    const dischargeEnergy = (parameters.voltage * parameters.current * parameters.pulseOnTime) / 1000;
-    const dutyCycle = (parameters.pulseOnTime / (parameters.pulseOnTime + parameters.pulseOffTime)) * 100;
-    const powerConsumption = (parameters.voltage * parameters.current) / 1000;
-    const estimatedCostPerHour = powerConsumption * 0.12 + 15 + (parameters.wireSpeed * 0.02);
-    const materialRemovalRate = (dischargeEnergy * dutyCycle * parameters.current) / 100;
-    const surfaceRoughness = Math.max(0.1, 5 - (parameters.voltage / 100) + (parameters.pulseOnTime / 20));
-    const wireWearRate = (parameters.current * parameters.voltage) / (parameters.wireSpeed * 100);
-    const efficiency = Math.min(100, (dutyCycle * parameters.dielectricFlow * parameters.wireSpeed) / 1000);
+    const cuttingEnergy = parameters.linearEnergy;
+    const cuttingSpeed = parameters.speed / 1000; // Convert mm/min to m/min
+    const powerConsumption = parameters.laserPower;
+    const estimatedCostPerHour = powerConsumption * 0.15 + 20 + (parameters.thickness * 2);
+    const materialRemovalRate = (parameters.speed * parameters.thickness) / 1000; // mm³/min
+    const surfaceQuality = Math.max(0.1, parameters.surfaceRoughness);
+    const precisionLevel = Math.max(0.001, parameters.deviation);
+    const efficiency = Math.min(100, (parameters.speed * parameters.laserPower) / (parameters.thickness * 100));
     
     return {
-      dischargeEnergy,
-      dutyCycle,
+      cuttingEnergy,
+      cuttingSpeed,
       powerConsumption,
       estimatedCostPerHour,
       materialRemovalRate,
-      surfaceRoughness,
-      wireWearRate,
+      surfaceQuality,
+      precisionLevel,
       efficiency
     };
   }, [parameters]);
@@ -79,18 +85,20 @@ function App() {
   const handleTrainModel = async (modelType: string, data: any) => {
     let model: ModelResult;
     
+    const { useRealData = true, uploadedData = null } = data;
+    
     switch (modelType) {
       case 'SVM':
-        model = trainSVM(data);
+        model = await trainSVM(useRealData);
         break;
       case 'ANN':
-        model = trainANN(data);
+        model = await trainANN(useRealData);
         break;
       case 'ELM':
-        model = trainELM(data);
+        model = await trainELM(useRealData);
         break;
       case 'GA':
-        model = trainGA(data);
+        model = await trainGA(useRealData);
         break;
       default:
         return;
@@ -172,21 +180,21 @@ function App() {
                 <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Process Overview</h3>
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
-                    <span className="text-gray-300">Discharge Energy</span>
+                    <span className="text-gray-300">Cutting Energy</span>
                     <span className="font-mono text-blue-400">
-                      {processMetrics.dischargeEnergy.toFixed(2)} mJ
+                      {processMetrics.cuttingEnergy.toFixed(2)} J/mm
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
-                    <span className="text-gray-300">Duty Cycle</span>
+                    <span className="text-gray-300">Cutting Speed</span>
                     <span className="font-mono text-green-400">
-                      {processMetrics.dutyCycle.toFixed(1)}%
+                      {processMetrics.cuttingSpeed.toFixed(1)} m/min
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Power Consumption</span>
                     <span className="font-mono text-yellow-400">
-                      {processMetrics.powerConsumption.toFixed(2)} kW
+                      {processMetrics.powerConsumption.toFixed(1)} kW
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
@@ -198,13 +206,13 @@ function App() {
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
                     <span className="text-gray-300">Surface Roughness</span>
                     <span className="font-mono text-cyan-400">
-                      {processMetrics.surfaceRoughness.toFixed(2)} Ra
+                      {processMetrics.surfaceQuality.toFixed(2)} Ra (µm)
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
-                    <span className="text-gray-300">Wire Wear Rate</span>
+                    <span className="text-gray-300">Precision Level</span>
                     <span className="font-mono text-red-400">
-                      {processMetrics.wireWearRate.toFixed(3)} %/min
+                      ±{processMetrics.precisionLevel.toFixed(3)} mm
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-2 sm:p-3 bg-gray-700 rounded text-sm sm:text-base">
@@ -228,24 +236,24 @@ function App() {
                     <div>
                       <div className="flex justify-between text-xs sm:text-sm mb-1">
                         <span className="text-gray-300">Cutting Precision</span>
-                        <span className="text-blue-400">{Math.min(100, 100 - processMetrics.wireWearRate * 10).toFixed(0)}%</span>
+                        <span className="text-blue-400">{Math.min(100, 100 - processMetrics.precisionLevel * 1000).toFixed(0)}%</span>
                       </div>
                       <div className="w-full bg-gray-600 rounded-full h-2">
                         <div
                           className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.min(100, 100 - processMetrics.wireWearRate * 10)}%` }}
+                          style={{ width: `${Math.min(100, 100 - processMetrics.precisionLevel * 1000)}%` }}
                         />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-xs sm:text-sm mb-1">
                         <span className="text-gray-300">Surface Quality</span>
-                        <span className="text-green-400">{Math.max(0, 100 - processMetrics.surfaceRoughness * 15).toFixed(0)}%</span>
+                        <span className="text-green-400">{Math.max(0, 100 - processMetrics.surfaceQuality * 20).toFixed(0)}%</span>
                       </div>
                       <div className="w-full bg-gray-600 rounded-full h-2">
                         <div
                           className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.max(0, 100 - processMetrics.surfaceRoughness * 15)}%` }}
+                          style={{ width: `${Math.max(0, 100 - processMetrics.surfaceQuality * 20)}%` }}
                         />
                       </div>
                     </div>

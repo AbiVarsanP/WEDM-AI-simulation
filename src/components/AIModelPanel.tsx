@@ -21,6 +21,7 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
   const [useUploadedData, setUseUploadedData] = useState(false);
   const [datasetError, setDatasetError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [useRealDataset, setUseRealDataset] = useState(true);
 
   const models = [
     { id: 'SVM', name: 'Support Vector Machine', icon: Target, color: 'text-blue-400' },
@@ -52,7 +53,7 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
         }
 
         const headers = lines[0].split(',').map(h => h.trim());
-        const requiredColumns = ['voltage', 'current', 'pulseOnTime', 'pulseOffTime', 'materialRemovalRate', 'surfaceRoughness'];
+        const requiredColumns = ['Material', 'Thickness', 'Laser Power', 'Speed', 'Ra', 'Deviation'];
         
         const missingColumns = requiredColumns.filter(col => 
           !headers.some(h => h.toLowerCase().includes(col.toLowerCase()))
@@ -101,10 +102,9 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
         if (prev >= 100) {
           clearInterval(interval);
           setIsTraining(false);
-          const trainingData = useUploadedData && uploadedDataset 
-            ? uploadedDataset.preview 
-            : generateTrainingData();
-          onTrainModel(selectedModel, trainingData);
+          // Use the selected data source for training
+          const useRealData = useRealDataset && !useUploadedData;
+          onTrainModel(selectedModel, { useRealData, uploadedData: useUploadedData ? uploadedDataset?.preview : null });
           return 100;
         }
         return prev + 2;
@@ -130,21 +130,26 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
   };
 
   const downloadSampleDataset = () => {
-    const sampleData = generateTrainingData();
-    const headers = ['voltage', 'current', 'pulseOnTime', 'pulseOffTime', 'materialRemovalRate', 'surfaceRoughness', 'dimensionalAccuracy'];
+    // Use actual laser cutting parameters as sample data
+    const sampleData = [
+      ['Material', 'Grade', 'Thickness (mm)', 'Laser Power (kW)', 'Speed (mm/min)', 'Gas & Pressure', 'Ra (µm)', 'Deviation (mm)', 'Kerf Taper (mm)', 'HAZ Depth (µm)', 'Linear Energy (J/mm)'],
+      ['Mild Steel', 'S355JR', '4', '3.0', '2900', 'O₂ @ 0.40 bar', '1.3', '0.225', '0.03', '33', '62.07'],
+      ['Mild Steel', 'S355JR', '6', '3.9', '3240', 'O₂ @ 0.55 bar', '1.1', '0.096', '0.15', '205', '72.22'],
+      ['Stainless Steel', 'AISI 304', '2', '3.0', '4000', 'N₂ @ 1.0 bar', '0.9', '0.080', '0.01', '20', '45.00'],
+      ['Stainless Steel', 'AISI 304', '4', '4.0', '3500', 'N₂ @ 1.2 bar', '0.8', '0.090', '0.02', '30', '68.57'],
+      ['Aluminium', 'Al-6061', '2', '2.5', '4500', 'N₂ @ 0.8 bar', '0.7', '0.070', '0.01', '15', '33.33'],
+      ['Aluminium', 'Al-6061', '4', '3.5', '4000', 'N₂ @ 1.0 bar', '0.8', '0.080', '0.02', '20', '52.50'],
+      ['Titanium', 'Ti6Al4V', '2', '3.0', '3000', 'N₂ @ 1.5 bar', '0.8', '0.090', '0.01', '25', '60.00'],
+      ['Titanium', 'Ti6Al4V', '4', '4.0', '2500', 'N₂ @ 1.7 bar', '0.9', '0.100', '0.02', '35', '96.00']
+    ];
     
-    const csvContent = [
-      headers.join(','),
-      ...sampleData.map(row => 
-        headers.map(header => row[header] || Math.random() * 100).join(',')
-      )
-    ].join('\n');
+    const csvContent = sampleData.map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'sample_edm_dataset.csv';
+    a.download = 'laser_cutting_parameters_sample.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -193,6 +198,20 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
+              id="useRealDataset"
+              checked={useRealDataset}
+              onChange={(e) => setUseRealDataset(e.target.checked)}
+              disabled={useUploadedData}
+              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="useRealDataset" className="text-sm text-gray-300">
+              Use built-in laser cutting dataset (78 samples)
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
               id="useUploadedData"
               checked={useUploadedData}
               onChange={(e) => setUseUploadedData(e.target.checked)}
@@ -200,7 +219,7 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
               className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
             />
             <label htmlFor="useUploadedData" className="text-sm text-gray-300">
-              Use uploaded dataset for training
+              Use uploaded dataset for training (overrides built-in dataset)
             </label>
           </div>
 
@@ -288,6 +307,18 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
             Using {uploadedDataset.name} ({uploadedDataset.size} samples)
           </span>
         )}
+        {!useUploadedData && useRealDataset && (
+          <span className="text-xs block mt-1">
+            Using built-in laser cutting dataset (78 samples)
+          </span>
+        )}
+        {!useUploadedData && !useRealDataset && (
+          <span className="text-xs block mt-1">
+            <span className="text-sm text-gray-500">
+            Using synthetic dataset (100 samples)
+            </span>
+          </span>
+        )}
       </button>
 
       {isTraining && (
@@ -341,6 +372,16 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
               Trained with uploaded dataset: {uploadedDataset.name}
             </div>
           )}
+          {!useUploadedData && useRealDataset && (
+            <div className="mt-2 text-xs text-green-400">
+              Trained with built-in laser cutting dataset
+            </div>
+          )}
+          {!useUploadedData && !useRealDataset && (
+            <div className="mt-2 text-xs text-yellow-400">
+              Trained with synthetic dataset
+            </div>
+          )}
         </div>
       )}
 
@@ -348,11 +389,11 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
       <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
         <h5 className="text-sm font-medium text-white mb-2">Dataset Requirements:</h5>
         <ul className="text-xs text-gray-400 space-y-1">
-          <li>• CSV format with headers</li>
-          <li>• Required columns: voltage, current, pulseOnTime, pulseOffTime</li>
-          <li>• Output columns: materialRemovalRate, surfaceRoughness</li>
-          <li>• Minimum 10 samples recommended</li>
-          <li>• Numeric values only (except headers)</li>
+          <li>• <strong>Built-in Dataset:</strong> 78 laser cutting parameter samples from real manufacturing data</li>
+          <li>• <strong>Materials:</strong> Mild Steel, Stainless Steel, Aluminum, Titanium</li>
+          <li>• <strong>Parameters:</strong> Material, Grade, Thickness, Laser Power, Speed, Gas & Pressure, Surface Roughness, Deviation, etc.</li>
+          <li>• CSV format with headers matching laser cutting parameters</li>
+          <li>• Upload your own dataset to override built-in data</li>
         </ul>
       </div>
     </div>

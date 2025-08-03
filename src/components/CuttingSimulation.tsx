@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Square, RotateCcw, RotateCw, Move3D } from 'lucide-react';
+import ShapeInput from './ShapeInput';
+import ShapeLibrary from './ShapeLibrary';
 
 interface SimulationProps {
   isRunning: boolean;
@@ -43,6 +45,10 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [cameraDistance, setCameraDistance] = useState(400);
 
+  // Custom shape state
+  const [customShape, setCustomShape] = useState<Point3D[] | null>(null);
+  const [isUsingCustomShape, setIsUsingCustomShape] = useState(false);
+
   // 3D Camera and projection settings
   const camera = {
     distance: cameraDistance,
@@ -59,8 +65,10 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     hexagon: generateHexagon3D(0, 0, 0, 40, 20)
   };
 
-  const [currentShape, setCurrentShape] = useState<keyof typeof shapes3D>('rectangle');
-  const cuttingPath3D = shapes3D[currentShape];
+  const [currentShape, setCurrentShape] = useState<keyof typeof shapes3D | 'custom'>('rectangle');
+  const cuttingPath3D = (currentShape === 'custom' && customShape && customShape.length > 0) 
+    ? customShape 
+    : shapes3D[currentShape === 'custom' ? 'rectangle' : currentShape as keyof typeof shapes3D];
   const totalPathLength = calculatePath3DLength(cuttingPath3D);
 
   function generateRectangle3D(centerX: number, centerY: number, centerZ: number, width: number, height: number, depth: number): Point3D[] {
@@ -121,6 +129,10 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
   }
 
   function calculatePath3DLength(path: Point3D[]): number {
+    if (!path || path.length < 2) {
+      return 0;
+    }
+    
     let length = 0;
     for (let i = 1; i < path.length; i++) {
       const dx = path[i].x - path[i-1].x;
@@ -165,6 +177,10 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
   }
 
   function getCurrentPosition3D(progress: number): Point3D {
+    if (!cuttingPath3D || cuttingPath3D.length === 0) {
+      return { x: 0, y: 0, z: 0 };
+    }
+    
     let currentLength = 0;
     const targetLength = (progress / 100) * totalPathLength;
     
@@ -324,7 +340,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
 
       // Update cutting progress
       if (isRunning && cutProgress.current < 100) {
-        const speed = Math.max(0.1, parameters.wireSpeed / 2500);
+        const speed = Math.max(0.1, (parameters.speed || 2900) / 5000);
         cutProgress.current += speed;
         
         if (cutProgress.current >= 100) {
@@ -410,8 +426,8 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       ctx.shadowBlur = 0;
 
       // 3D Dielectric fluid visualization
-      if (parameters.dielectricFlow > 5) {
-        const fluidAlpha = parameters.dielectricFlow / 100;
+      if ((parameters.laserPower || 3) > 3) {
+        const fluidAlpha = (parameters.laserPower || 3) / 20;
         ctx.fillStyle = `rgba(59, 130, 246, ${fluidAlpha * 0.3})`;
         ctx.beginPath();
         ctx.arc(currentPos2D.x, currentPos2D.y, 25, 0, Math.PI * 2);
@@ -419,8 +435,8 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       }
 
       // Generate 3D sparks
-      if (isRunning && cutProgress.current < 100 && Math.random() < parameters.current / 200) {
-        const sparkCount = Math.floor(parameters.current / 8);
+      if (isRunning && cutProgress.current < 100 && Math.random() < (parameters.laserPower || 3) / 20) {
+        const sparkCount = Math.floor((parameters.laserPower || 3) * 2);
         for (let i = 0; i < sparkCount; i++) {
           sparkParticles.current.push({
             x: currentPos3D.x + (Math.random() - 0.5) * 30,
@@ -538,13 +554,15 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       
       ctx.font = '10px monospace';
       const stats3D = [
-        `3D Position: (${currentPos3D.x.toFixed(0)}, ${currentPos3D.y.toFixed(0)}, ${currentPos3D.z.toFixed(0)})`,
+        `Material: ${parameters.material || 'Mild Steel'}`,
+        `Thickness: ${parameters.thickness || 4} mm`,
+        `Laser Power: ${parameters.laserPower || 3.0} kW`,
         `Cut Depth: ${(cutProgress.current * 0.6).toFixed(1)} mm`,
-        `Material Volume: ${(parameters.current * parameters.voltage * cutProgress.current / 10000).toFixed(2)} mm³`,
-        `Surface Quality: ${(100 - parameters.pulseOnTime / 2).toFixed(1)}%`,
+        `Material Volume: ${((parameters.speed || 2900) * (parameters.thickness || 4) * cutProgress.current / 100000).toFixed(2)} mm³`,
+        `Surface Quality: ${(100 - (parameters.surfaceRoughness || 1.3) * 20).toFixed(1)}%`,
         `3D Progress: ${Math.min(100, cutProgress.current).toFixed(1)}%`,
-        `Wire Tension: ${(parameters.wireSpeed * 0.8).toFixed(1)} N`,
-        `Thermal Load: ${(parameters.voltage * parameters.current / 100).toFixed(1)}°C`,
+        `Cut Speed: ${(parameters.speed || 2900)} mm/min`,
+        `Linear Energy: ${(parameters.linearEnergy || 62)} J/mm`,
         `Status: ${isComplete ? (showCutPiece ? '3D Cut Complete' : 'Finishing...') : (isRunning ? '3D Cutting...' : '3D Ready')}`
       ];
 
@@ -566,6 +584,13 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     };
   }, [isRunning, parameters, isComplete, showCutPiece, currentShape, cuttingPath3D, totalPathLength, cameraAngle, autoRotate, cameraDistance]);
 
+  // Update effect dependencies to include custom shape
+  React.useEffect(() => {
+    if (customShape && customShape.length > 1) {
+      resetSimulation();
+    }
+  }, [customShape]);
+
   const handleReset = () => {
     resetSimulation();
     onStopSimulation();
@@ -573,6 +598,22 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
 
   const handleShapeChange = (shape: keyof typeof shapes3D) => {
     setCurrentShape(shape);
+    setIsUsingCustomShape(false);
+    resetSimulation();
+    onStopSimulation();
+  };
+
+  const handleCustomShapeChange = (points: Point3D[]) => {
+    if (points && points.length > 0) {
+      setCustomShape(points);
+      setCurrentShape('custom');
+      setIsUsingCustomShape(true);
+    } else {
+      // Reset to default shape if empty points array
+      setCustomShape(null);
+      setCurrentShape('rectangle');
+      setIsUsingCustomShape(false);
+    }
     resetSimulation();
     onStopSimulation();
   };
@@ -633,14 +674,14 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       {/* Enhanced 3D Controls - Mobile Responsive */}
       <div className="mb-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">3D Shape:</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Preset Shapes:</label>
           <div className="grid grid-cols-2 sm:flex gap-2">
             {Object.keys(shapes3D).map((shape) => (
               <button
                 key={shape}
                 onClick={() => handleShapeChange(shape as keyof typeof shapes3D)}
                 className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition-colors ${
-                  currentShape === shape
+                  currentShape === shape && !isUsingCustomShape
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }`}
@@ -648,6 +689,11 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
                 {shape.charAt(0).toUpperCase() + shape.slice(1)}
               </button>
             ))}
+            {isUsingCustomShape && (
+              <div className="px-2 sm:px-3 py-1 rounded text-xs sm:text-sm bg-purple-600 text-white">
+                Custom ({customShape?.length || 0} pts)
+              </div>
+            )}
           </div>
         </div>
         
@@ -712,11 +758,25 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         </div>
       </div>
 
+      {/* Shape Input Component */}
+      <div className="mb-4">
+        <ShapeInput 
+          onShapeChange={handleCustomShapeChange}
+          currentShape={currentShape}
+        />
+      </div>
+
+      {/* Shape Library Component */}
+      <div className="mb-4">
+        <ShapeLibrary onShapeSelect={handleCustomShapeChange} />
+      </div>
+
       {/* Instructions */}
       <div className="mb-4 p-3 bg-gray-700/50 rounded-lg">
         <div className="text-xs sm:text-sm text-gray-300">
           <strong>Mouse Controls:</strong> Click and drag to rotate • Scroll wheel to zoom • 
-          Manual controls disable auto-rotation
+          Manual controls disable auto-rotation<br/>
+          <strong>Shape Input:</strong> Use preset shapes, upload files (JSON/CSV/TXT), draw shapes, or enter X,Y,Z coordinates
         </div>
       </div>
       
@@ -744,19 +804,22 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
           <div className="text-gray-300 mb-1">3D Complexity</div>
           <div className="text-purple-400 font-mono">
-            {currentShape === 'circle' ? 'High' : currentShape === 'star' ? 'Very High' : currentShape === 'hexagon' ? 'Medium' : 'Low'}
+            {currentShape === 'custom' ? `Custom (${customShape?.length || 0})` : 
+             currentShape === 'circle' ? 'High' : 
+             currentShape === 'star' ? 'Very High' : 
+             currentShape === 'hexagon' ? 'Medium' : 'Low'}
           </div>
         </div>
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
-          <div className="text-gray-300 mb-1">Volume Removed</div>
+          <div className="text-gray-300 mb-1">Cut Volume</div>
           <div className="text-orange-400 font-mono">
-            {(cutProgress.current * 2.5).toFixed(1)} mm³
+            {((parameters.thickness || 4) * cutProgress.current * 0.5).toFixed(1)} mm³
           </div>
         </div>
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
-          <div className="text-gray-300 mb-1">3D Precision</div>
+          <div className="text-gray-300 mb-1">Precision</div>
           <div className="text-cyan-400 font-mono">
-            ±{(0.01 + parameters.sparkGap * 100).toFixed(3)} mm
+            ±{(parameters.deviation || 0.225).toFixed(3)} mm
           </div>
         </div>
       </div>
