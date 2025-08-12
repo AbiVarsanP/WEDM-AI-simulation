@@ -23,14 +23,54 @@ interface ResultsPanelProps {
   currentParameters: any;
   analyticsData: AnalyticsDataPoint[];
   processMetrics: any;
+  cuttingMethod: string;
 }
 
 const ResultsPanel: React.FC<ResultsPanelProps> = ({ 
   predictions, 
   currentParameters, 
   analyticsData, 
-  processMetrics 
+  processMetrics,
+  cuttingMethod
 }) => {
+  // Method-specific metric labels
+  const getMethodSpecificLabels = () => {
+    switch (cuttingMethod) {
+      case 'wire':
+        return {
+          powerLabel: 'Voltage (V)',
+          speedLabel: 'Wire Speed (mm/min)',
+          processName: 'Wire EDM'
+        };
+      case 'water':
+        return {
+          powerLabel: 'Pressure (PSI)',
+          speedLabel: 'Cutting Speed (mm/min)',
+          processName: 'Water Jet'
+        };
+      case 'laser':
+        return {
+          powerLabel: 'Laser Power (kW)',
+          speedLabel: 'Cutting Speed (mm/min)',
+          processName: 'Laser Cutting'
+        };
+      case 'cnc':
+        return {
+          powerLabel: 'Spindle Power (kW)',
+          speedLabel: 'Feed Rate (mm/min)',
+          processName: 'CNC Milling'
+        };
+      default:
+        return {
+          powerLabel: 'Power',
+          speedLabel: 'Speed',
+          processName: 'Cutting'
+        };
+    }
+  };
+
+  const methodLabels = getMethodSpecificLabels();
+
   const metrics = [
     { 
       key: 'materialRemovalRate', 
@@ -165,7 +205,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
       <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
         <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
           <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-          Real-Time Analytics Dashboard
+          {methodLabels.processName} Analytics Dashboard
         </h3>
 
         {/* Real-time Metrics Cards */}
@@ -178,8 +218,8 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
             color="text-green-400"
           />
           <MetricCard
-            title="Power Consumption"
-            value={`${processMetrics.powerConsumption.toFixed(1)} kW`}
+            title={methodLabels.powerLabel.split(' ')[0]}
+            value={`${processMetrics.powerConsumption.toFixed(1)} ${methodLabels.powerLabel.match(/\(([^)]+)\)/)?.[1] || 'kW'}`}
             change="-1.2%"
             icon={Zap}
             color="text-yellow-400"
@@ -232,24 +272,24 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
 
         {/* Process Statistics */}
         <div className="bg-gray-700 p-4 rounded-lg">
-          <h4 className="font-medium text-white mb-3 text-sm sm:text-base">Process Statistics</h4>
+          <h4 className="font-medium text-white mb-3 text-sm sm:text-base">{methodLabels.processName} Statistics</h4>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs sm:text-sm">
             <div>
-              <span className="text-gray-400">Avg. Temperature:</span>
+              <span className="text-gray-400">{cuttingMethod === 'water' ? 'Avg. Pressure:' : 'Avg. Temperature:'}</span>
               <div className="text-orange-400 font-mono">
                 {analyticsData.length > 0 
                   ? (analyticsData.reduce((sum, d) => sum + d.temperature, 0) / analyticsData.length).toFixed(1)
                   : '0.0'
-                }°C
+                }{cuttingMethod === 'water' ? ' PSI' : '°C'}
               </div>
             </div>
             <div>
-              <span className="text-gray-400">Peak Power:</span>
+              <span className="text-gray-400">Peak {methodLabels.powerLabel.split(' ')[0]}:</span>
               <div className="text-yellow-400 font-mono">
                 {analyticsData.length > 0 
                   ? Math.max(...analyticsData.map(d => d.powerConsumption)).toFixed(1)
                   : processMetrics.powerConsumption.toFixed(1)
-                } kW
+                } {methodLabels.powerLabel.match(/\(([^)]+)\)/)?.[1] || 'kW'}
               </div>
             </div>
             <div>
@@ -272,7 +312,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
       <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
       <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-        AI Model Predictions
+        AI Model Predictions - {methodLabels.processName}
       </h3>
 
       {Object.keys(predictions).length === 0 ? (
@@ -305,23 +345,23 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
           ))}
 
           <div className="bg-gray-700 p-3 sm:p-4 rounded-lg">
-            <h4 className="font-medium text-white mb-3 text-sm sm:text-base">Current Parameter Impact</h4>
+            <h4 className="font-medium text-white mb-3 text-sm sm:text-base">{methodLabels.processName} Parameter Impact</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
               <div>
-                <span className="text-gray-400">Voltage Impact:</span>
+                <span className="text-gray-400">{methodLabels.powerLabel} Impact:</span>
                 <div className="w-full bg-gray-600 rounded-full h-2 mt-1">
                   <div 
                     className="bg-yellow-400 h-2 rounded-full" 
-                    style={{ width: `${(currentParameters.voltage / 300) * 100}%` }}
+                    style={{ width: `${Math.min(100, (currentParameters.laserPower || 3) / (cuttingMethod === 'water' ? 900 : cuttingMethod === 'cnc' ? 50 : 30) * 100)}%` }}
                   />
                 </div>
               </div>
               <div>
-                <span className="text-gray-400">Current Impact:</span>
+                <span className="text-gray-400">{methodLabels.speedLabel} Impact:</span>
                 <div className="w-full bg-gray-600 rounded-full h-2 mt-1">
                   <div 
                     className="bg-blue-400 h-2 rounded-full" 
-                    style={{ width: `${(currentParameters.current / 50) * 100}%` }}
+                    style={{ width: `${Math.min(100, (currentParameters.speed || 2900) / (cuttingMethod === 'laser' ? 25000 : cuttingMethod === 'cnc' ? 10000 : 5000) * 100)}%` }}
                   />
                 </div>
               </div>

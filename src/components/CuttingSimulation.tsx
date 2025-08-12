@@ -6,6 +6,7 @@ import ShapeLibrary from './ShapeLibrary';
 interface SimulationProps {
   isRunning: boolean;
   parameters: any;
+  cuttingMethod: string;
   cuttingSpeed: number;
   onCuttingSpeedChange: (speed: number) => void;
   onToggleSimulation: () => void;
@@ -26,6 +27,7 @@ interface Point2D {
 const CuttingSimulation: React.FC<SimulationProps> = ({ 
   isRunning, 
   parameters, 
+  cuttingMethod,
   cuttingSpeed,
   onCuttingSpeedChange,
   onToggleSimulation, 
@@ -60,6 +62,69 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
     near: 1,
     far: 1000
   };
+
+  // Method-specific visual settings
+  const getMethodVisuals = () => {
+    switch (cuttingMethod) {
+      case 'wire':
+        return {
+          toolColor: '#fbbf24', // Yellow wire
+          sparkColor: '#ef4444', // Red sparks
+          cutColor: '#ef4444',   // Red cut line
+          toolWidth: 2,
+          showSparks: true,
+          showFluid: true,
+          fluidColor: 'rgba(59, 130, 246, 0.3)', // Blue dielectric
+          processName: 'Wire EDM'
+        };
+      case 'water':
+        return {
+          toolColor: '#06b6d4', // Cyan water jet
+          sparkColor: '#ffffff', // White particles
+          cutColor: '#06b6d4',   // Cyan cut line
+          toolWidth: 4,
+          showSparks: true,
+          showFluid: true,
+          fluidColor: 'rgba(6, 182, 212, 0.4)', // Cyan water
+          processName: 'Water Jet'
+        };
+      case 'laser':
+        return {
+          toolColor: '#dc2626', // Red laser beam
+          sparkColor: '#fbbf24', // Yellow sparks
+          cutColor: '#dc2626',   // Red cut line
+          toolWidth: 3,
+          showSparks: true,
+          showFluid: false,
+          fluidColor: 'rgba(220, 38, 38, 0.2)', // Red heat zone
+          processName: 'Laser Cutting'
+        };
+      case 'cnc':
+        return {
+          toolColor: '#64748b', // Gray tool
+          sparkColor: '#f59e0b', // Amber chips
+          cutColor: '#64748b',   // Gray cut line
+          toolWidth: 6,
+          showSparks: true,
+          showFluid: false,
+          fluidColor: 'rgba(100, 116, 139, 0.2)', // Gray coolant
+          processName: 'CNC Milling'
+        };
+      default:
+        return {
+          toolColor: '#fbbf24',
+          sparkColor: '#ef4444',
+          cutColor: '#ef4444',
+          toolWidth: 2,
+          showSparks: true,
+          showFluid: true,
+          fluidColor: 'rgba(59, 130, 246, 0.3)',
+          processName: 'Cutting'
+        };
+    }
+  };
+
+  const methodVisuals = getMethodVisuals();
 
   // Define 3D cutting shapes
   const shapes3D = {
@@ -360,9 +425,9 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         const currentLength = (cutProgress.current / 100) * totalPathLength;
         let drawnLength = 0;
         
-        ctx.strokeStyle = '#ef4444';
+        ctx.strokeStyle = methodVisuals.cutColor;
         ctx.lineWidth = 3;
-        ctx.shadowColor = '#ef4444';
+        ctx.shadowColor = methodVisuals.cutColor;
         ctx.shadowBlur = 10;
         ctx.beginPath();
         
@@ -403,61 +468,78 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         ctx.shadowBlur = 0;
       }
 
-      // Draw 3D wire system
+      // Draw 3D cutting tool system
       const currentPos3D = getCurrentPosition3D(cutProgress.current);
-      const wireTop = project3D({ x: currentPos3D.x, y: currentPos3D.y, z: 150 }, cameraAngle);
-      const wireBottom = project3D({ x: currentPos3D.x, y: currentPos3D.y, z: -150 }, cameraAngle);
+      const toolTop = project3D({ x: currentPos3D.x, y: currentPos3D.y, z: 150 }, cameraAngle);
+      const toolBottom = project3D({ x: currentPos3D.x, y: currentPos3D.y, z: -150 }, cameraAngle);
       const currentPos2D = project3D(currentPos3D, cameraAngle);
 
-      // Wire guides
-      ctx.strokeStyle = '#64748b';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(wireTop.x - 5, wireTop.y);
-      ctx.lineTo(wireTop.x + 5, wireTop.y);
-      ctx.moveTo(wireBottom.x - 5, wireBottom.y);
-      ctx.lineTo(wireBottom.x + 5, wireBottom.y);
-      ctx.stroke();
+      // Tool guides (for wire and water jet)
+      if (cuttingMethod === 'wire' || cuttingMethod === 'water') {
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(toolTop.x - 5, toolTop.y);
+        ctx.lineTo(toolTop.x + 5, toolTop.y);
+        ctx.moveTo(toolBottom.x - 5, toolBottom.y);
+        ctx.lineTo(toolBottom.x + 5, toolBottom.y);
+        ctx.stroke();
+      }
 
-      // Wire
-      ctx.strokeStyle = '#fbbf24';
-      ctx.lineWidth = 2;
-      ctx.shadowColor = '#fbbf24';
+      // Cutting tool
+      ctx.strokeStyle = methodVisuals.toolColor;
+      ctx.lineWidth = methodVisuals.toolWidth;
+      ctx.shadowColor = methodVisuals.toolColor;
       ctx.shadowBlur = 6;
       ctx.beginPath();
-      ctx.moveTo(wireTop.x, wireTop.y);
-      ctx.lineTo(wireBottom.x, wireBottom.y);
+      
+      if (cuttingMethod === 'cnc') {
+        // Draw spinning tool for CNC
+        ctx.arc(currentPos2D.x, currentPos2D.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = methodVisuals.toolColor;
+        ctx.fill();
+      } else if (cuttingMethod === 'laser') {
+        // Draw laser beam
+        ctx.moveTo(currentPos2D.x, currentPos2D.y - 100);
+        ctx.lineTo(currentPos2D.x, currentPos2D.y + 100);
+      } else {
+        // Draw wire or water jet
+        ctx.moveTo(toolTop.x, toolTop.y);
+        ctx.lineTo(toolBottom.x, toolBottom.y);
+      }
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // 3D Dielectric fluid visualization
-      if ((parameters.laserPower || 3) > 3) {
+      // Method-specific fluid/coolant visualization
+      if (methodVisuals.showFluid && (parameters.laserPower || 3) > 3) {
         const fluidAlpha = (parameters.laserPower || 3) / 20;
-        ctx.fillStyle = `rgba(59, 130, 246, ${fluidAlpha * 0.3})`;
+        ctx.fillStyle = methodVisuals.fluidColor;
         ctx.beginPath();
-        ctx.arc(currentPos2D.x, currentPos2D.y, 25, 0, Math.PI * 2);
+        const radius = cuttingMethod === 'water' ? 35 : cuttingMethod === 'cnc' ? 20 : 25;
+        ctx.arc(currentPos2D.x, currentPos2D.y, radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Generate 3D sparks
-      if (isRunning && cutProgress.current < 100 && Math.random() < (parameters.laserPower || 3) / 20) {
+      // Generate method-specific particles/sparks
+      if (methodVisuals.showSparks && isRunning && cutProgress.current < 100 && Math.random() < (parameters.laserPower || 3) / 20) {
         const sparkCount = Math.floor((parameters.laserPower || 3) * 2);
         for (let i = 0; i < sparkCount; i++) {
+          const spreadFactor = cuttingMethod === 'water' ? 40 : cuttingMethod === 'cnc' ? 25 : 30;
           sparkParticles.current.push({
-            x: currentPos3D.x + (Math.random() - 0.5) * 30,
-            y: currentPos3D.y + (Math.random() - 0.5) * 30,
+            x: currentPos3D.x + (Math.random() - 0.5) * spreadFactor,
+            y: currentPos3D.y + (Math.random() - 0.5) * spreadFactor,
             z: currentPos3D.z + (Math.random() - 0.5) * 20,
-            vx: (Math.random() - 0.5) * 12,
-            vy: (Math.random() - 0.5) * 12,
-            vz: (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * (cuttingMethod === 'water' ? 15 : 12),
+            vy: (Math.random() - 0.5) * (cuttingMethod === 'water' ? 15 : 12),
+            vz: (Math.random() - 0.5) * (cuttingMethod === 'cnc' ? 12 : 8),
             life: 20 + Math.random() * 30,
             maxLife: 50,
-            size: 2 + Math.random() * 4
+            size: (cuttingMethod === 'water' ? 1 : 2) + Math.random() * 4
           });
         }
       }
 
-      // Update and draw 3D spark particles
+      // Update and draw method-specific particles
       sparkParticles.current = sparkParticles.current.filter(particle => {
         particle.x += particle.vx;
         particle.y += particle.vy;
@@ -473,14 +555,46 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         if (size > 0) {
           const projectedSpark = project3D({ x: particle.x, y: particle.y, z: particle.z }, cameraAngle);
           
-          const sparkGradient = ctx.createRadialGradient(
-            projectedSpark.x, projectedSpark.y, 0,
-            projectedSpark.x, projectedSpark.y, size
-          );
-          sparkGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-          sparkGradient.addColorStop(0.3, `rgba(255, 165, 0, ${alpha * 0.9})`);
-          sparkGradient.addColorStop(0.7, `rgba(255, 69, 0, ${alpha * 0.6})`);
-          sparkGradient.addColorStop(1, `rgba(139, 69, 19, ${alpha * 0.2})`);
+          // Method-specific particle colors
+          let sparkGradient;
+          if (cuttingMethod === 'water') {
+            sparkGradient = ctx.createRadialGradient(
+              projectedSpark.x, projectedSpark.y, 0,
+              projectedSpark.x, projectedSpark.y, size
+            );
+            sparkGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            sparkGradient.addColorStop(0.3, `rgba(6, 182, 212, ${alpha * 0.9})`);
+            sparkGradient.addColorStop(0.7, `rgba(14, 165, 233, ${alpha * 0.6})`);
+            sparkGradient.addColorStop(1, `rgba(59, 130, 246, ${alpha * 0.2})`);
+          } else if (cuttingMethod === 'laser') {
+            sparkGradient = ctx.createRadialGradient(
+              projectedSpark.x, projectedSpark.y, 0,
+              projectedSpark.x, projectedSpark.y, size
+            );
+            sparkGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            sparkGradient.addColorStop(0.3, `rgba(251, 191, 36, ${alpha * 0.9})`);
+            sparkGradient.addColorStop(0.7, `rgba(239, 68, 68, ${alpha * 0.6})`);
+            sparkGradient.addColorStop(1, `rgba(220, 38, 38, ${alpha * 0.2})`);
+          } else if (cuttingMethod === 'cnc') {
+            sparkGradient = ctx.createRadialGradient(
+              projectedSpark.x, projectedSpark.y, 0,
+              projectedSpark.x, projectedSpark.y, size
+            );
+            sparkGradient.addColorStop(0, `rgba(245, 158, 11, ${alpha})`);
+            sparkGradient.addColorStop(0.3, `rgba(217, 119, 6, ${alpha * 0.9})`);
+            sparkGradient.addColorStop(0.7, `rgba(180, 83, 9, ${alpha * 0.6})`);
+            sparkGradient.addColorStop(1, `rgba(146, 64, 14, ${alpha * 0.2})`);
+          } else {
+            // Default wire EDM sparks
+            sparkGradient = ctx.createRadialGradient(
+              projectedSpark.x, projectedSpark.y, 0,
+              projectedSpark.x, projectedSpark.y, size
+            );
+            sparkGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+            sparkGradient.addColorStop(0.3, `rgba(255, 165, 0, ${alpha * 0.9})`);
+            sparkGradient.addColorStop(0.7, `rgba(255, 69, 0, ${alpha * 0.6})`);
+            sparkGradient.addColorStop(1, `rgba(139, 69, 19, ${alpha * 0.2})`);
+          }
           
           ctx.fillStyle = sparkGradient;
           ctx.beginPath();
@@ -552,26 +666,26 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       ctx.lineWidth = 2;
       ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
-      // 3D Statistics
+      // Method-specific statistics
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 12px monospace';
-      ctx.fillText('3D CUTTING ANALYSIS', panelX + 10, panelY + 20);
+      ctx.fillText(`${methodVisuals.processName.toUpperCase()} ANALYSIS`, panelX + 10, panelY + 20);
       
       ctx.font = '10px monospace';
-      const stats3D = [
+      const stats = [
         `Material: ${parameters.material || 'Mild Steel'}`,
         `Thickness: ${parameters.thickness || 4} mm`,
-        `Laser Power: ${parameters.laserPower || 3.0} kW`,
+        `${cuttingMethod === 'wire' ? 'Voltage' : cuttingMethod === 'water' ? 'Pressure' : cuttingMethod === 'cnc' ? 'Spindle Power' : 'Laser Power'}: ${parameters.laserPower || 3.0} ${cuttingMethod === 'water' ? 'kPSI' : cuttingMethod === 'wire' ? 'V' : 'kW'}`,
         `Cut Depth: ${(cutProgress.current * 0.6).toFixed(1)} mm`,
         `Material Volume: ${((parameters.speed || 2900) * (parameters.thickness || 4) * cutProgress.current / 100000).toFixed(2)} mm³`,
         `Surface Quality: ${(100 - (parameters.surfaceRoughness || 1.3) * 20).toFixed(1)}%`,
-        `3D Progress: ${Math.min(100, cutProgress.current).toFixed(1)}%`,
+        `Progress: ${Math.min(100, cutProgress.current).toFixed(1)}%`,
         `Cut Speed: ${(parameters.speed || 2900)} mm/min`,
-        `Linear Energy: ${(parameters.linearEnergy || 62)} J/mm`,
-        `Status: ${isComplete ? (showCutPiece ? '3D Cut Complete' : 'Finishing...') : (isRunning ? '3D Cutting...' : '3D Ready')}`
+        `${cuttingMethod === 'wire' ? 'Dielectric Flow' : cuttingMethod === 'water' ? 'Abrasive Flow' : cuttingMethod === 'cnc' ? 'Tool Diameter' : 'Linear Energy'}: ${(parameters.linearEnergy || 62)} ${cuttingMethod === 'wire' ? 'L/min' : cuttingMethod === 'water' ? 'kg/min' : cuttingMethod === 'cnc' ? 'mm' : 'J/mm'}`,
+        `Status: ${isComplete ? (showCutPiece ? 'Cut Complete' : 'Finishing...') : (isRunning ? `${methodVisuals.processName}...` : 'Ready')}`
       ];
 
-      stats3D.forEach((stat, index) => {
+      stats.forEach((stat, index) => {
         const colors = ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb7185', '#10b981', '#06b6d4'];
         ctx.fillStyle = colors[index % colors.length];
         ctx.fillText(stat, panelX + 10, panelY + 40 + index * 14);
@@ -587,7 +701,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isRunning, parameters, isComplete, showCutPiece, currentShape, cuttingPath3D, totalPathLength, cameraAngle, autoRotate, cameraDistance]);
+  }, [isRunning, parameters, isComplete, showCutPiece, currentShape, cuttingPath3D, totalPathLength, cameraAngle, autoRotate, cameraDistance, cuttingMethod, methodVisuals]);
 
   // Update effect dependencies to include custom shape
   React.useEffect(() => {
@@ -642,7 +756,7 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
         <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
           <Move3D className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-          3D Wire EDM Cutting Simulation
+          3D {methodVisuals.processName} Simulation
         </h3>
         <div className="flex flex-wrap gap-2">
           <button
@@ -826,13 +940,13 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
-          <div className="text-gray-300 mb-1">3D Cutting Status</div>
+          <div className="text-gray-300 mb-1">Cutting Status</div>
           <div className={`font-medium ${isComplete ? 'text-green-400' : isRunning ? 'text-blue-400' : 'text-yellow-400'}`}>
-            {isComplete ? '3D Complete' : isRunning ? '3D Cutting' : '3D Ready'}
+            {isComplete ? 'Complete' : isRunning ? `${methodVisuals.processName}` : 'Ready'}
           </div>
         </div>
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
-          <div className="text-gray-300 mb-1">3D Complexity</div>
+          <div className="text-gray-300 mb-1">Complexity</div>
           <div className="text-purple-400 font-mono">
             {currentShape === 'custom' ? `Custom (${customShape?.length || 0})` : 
              currentShape === 'circle' ? 'High' : 
@@ -853,9 +967,9 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
           </div>
         </div>
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
-          <div className="text-gray-300 mb-1">Precision</div>
+          <div className="text-gray-300 mb-1">Method</div>
           <div className="text-cyan-400 font-mono">
-            ±{(parameters.deviation || 0.225).toFixed(3)} mm
+            {methodVisuals.processName}
           </div>
         </div>
       </div>
