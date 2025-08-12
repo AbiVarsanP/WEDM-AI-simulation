@@ -33,7 +33,7 @@ const ParameterPanel: React.FC<ParameterPanelProps> = ({ parameters, onParameter
   const parameterConfigs = [
     { key: 'thickness', label: 'Thickness (mm)', min: 2, max: 10, step: 0.5, icon: Gauge, color: 'text-blue-400' },
     { key: 'laserPower', label: 'Laser Power (kW)', min: 2.5, max: 6.0, step: 0.1, icon: Zap, color: 'text-yellow-400' },
-    { key: 'speed', label: 'Speed (mm/min)', min: 1500, max: 4600, step: 50, icon: Wind, color: 'text-green-400' },
+    { key: 'speed', label: 'Feed Rate (mm/min)', min: 500, max: 5000, step: 25, icon: Wind, color: 'text-green-400' },
     { key: 'surfaceRoughness', label: 'Ra (µm)', min: 0.7, max: 1.5, step: 0.1, icon: Gauge, color: 'text-cyan-400' },
     { key: 'deviation', label: 'Deviation (mm)', min: 0.070, max: 0.225, step: 0.005, icon: Gauge, color: 'text-purple-400' },
     { key: 'kerfTaper', label: 'Kerf Taper (mm)', min: 0.01, max: 0.21, step: 0.01, icon: Gauge, color: 'text-orange-400' },

@@ -1,5 +1,15 @@
 import React from 'react';
-import { TrendingUp, Target, Layers, Clock } from 'lucide-react';
+import { TrendingUp, Target, Layers, Clock, BarChart3, Activity, Thermometer, Zap } from 'lucide-react';
+
+interface AnalyticsDataPoint {
+  timestamp: number;
+  progress: number;
+  materialRemovalRate: number;
+  powerConsumption: number;
+  surfaceQuality: number;
+  temperature: number;
+  efficiency: number;
+}
 
 interface Prediction {
   materialRemovalRate: number;
@@ -11,9 +21,16 @@ interface Prediction {
 interface ResultsPanelProps {
   predictions: Record<string, Prediction>;
   currentParameters: any;
+  analyticsData: AnalyticsDataPoint[];
+  processMetrics: any;
 }
 
-const ResultsPanel: React.FC<ResultsPanelProps> = ({ predictions, currentParameters }) => {
+const ResultsPanel: React.FC<ResultsPanelProps> = ({ 
+  predictions, 
+  currentParameters, 
+  analyticsData, 
+  processMetrics 
+}) => {
   const metrics = [
     { 
       key: 'materialRemovalRate', 
@@ -73,11 +90,189 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ predictions, currentParamet
     return bestModel;
   };
 
+  // Simple line chart component
+  const LineChart: React.FC<{
+    data: number[];
+    label: string;
+    color: string;
+    unit: string;
+    height?: number;
+  }> = ({ data, label, color, unit, height = 60 }) => {
+    if (data.length === 0) return null;
+    
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const range = max - min || 1;
+    
+    const points = data.map((value, index) => {
+      const x = (index / (data.length - 1)) * 100;
+      const y = height - ((value - min) / range) * height;
+      return `${x},${y}`;
+    }).join(' ');
+    
+    return (
+      <div className="bg-gray-700 p-3 rounded-lg">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-white">{label}</span>
+          <span className="text-xs text-gray-400">
+            {data[data.length - 1]?.toFixed(2)} {unit}
+          </span>
+        </div>
+        <svg width="100%" height={height} className="overflow-visible">
+          <polyline
+            points={points}
+            fill="none"
+            stroke={color}
+            strokeWidth="2"
+            className="drop-shadow-sm"
+          />
+          <defs>
+            <linearGradient id={`gradient-${label}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={color} stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
+          <polygon
+            points={`0,${height} ${points} 100,${height}`}
+            fill={`url(#gradient-${label})`}
+          />
+        </svg>
+      </div>
+    );
+  };
+
+  // Real-time metrics cards
+  const MetricCard: React.FC<{
+    title: string;
+    value: string;
+    change: string;
+    icon: React.ComponentType<any>;
+    color: string;
+  }> = ({ title, value, change, icon: Icon, color }) => (
+    <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+      <div className="flex items-center justify-between mb-2">
+        <Icon className={`w-5 h-5 ${color}`} />
+        <span className="text-xs text-gray-400">{change}</span>
+      </div>
+      <div className="text-lg font-bold text-white">{value}</div>
+      <div className="text-sm text-gray-300">{title}</div>
+    </div>
+  );
+
   return (
-    <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+    <div className="space-y-6">
+      {/* Analytics Dashboard */}
+      <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
+        <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+          Real-Time Analytics Dashboard
+        </h3>
+
+        {/* Real-time Metrics Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <MetricCard
+            title="Material Removal Rate"
+            value={`${processMetrics.materialRemovalRate.toFixed(2)} mm³/min`}
+            change="+2.3%"
+            icon={Activity}
+            color="text-green-400"
+          />
+          <MetricCard
+            title="Power Consumption"
+            value={`${processMetrics.powerConsumption.toFixed(1)} kW`}
+            change="-1.2%"
+            icon={Zap}
+            color="text-yellow-400"
+          />
+          <MetricCard
+            title="Surface Quality"
+            value={`${processMetrics.surfaceQuality.toFixed(1)} Ra`}
+            change="+0.8%"
+            icon={Layers}
+            color="text-blue-400"
+          />
+          <MetricCard
+            title="Process Efficiency"
+            value={`${processMetrics.efficiency.toFixed(1)}%`}
+            change="+5.1%"
+            icon={TrendingUp}
+            color="text-purple-400"
+          />
+        </div>
+
+        {/* Real-time Charts */}
+        {analyticsData.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <LineChart
+              data={analyticsData.map(d => d.materialRemovalRate)}
+              label="Material Removal Rate"
+              color="#10b981"
+              unit="mm³/min"
+            />
+            <LineChart
+              data={analyticsData.map(d => d.powerConsumption)}
+              label="Power Consumption"
+              color="#f59e0b"
+              unit="kW"
+            />
+            <LineChart
+              data={analyticsData.map(d => d.surfaceQuality)}
+              label="Surface Quality"
+              color="#3b82f6"
+              unit="Ra"
+            />
+            <LineChart
+              data={analyticsData.map(d => d.efficiency)}
+              label="Process Efficiency"
+              color="#8b5cf6"
+              unit="%"
+            />
+          </div>
+        )}
+
+        {/* Process Statistics */}
+        <div className="bg-gray-700 p-4 rounded-lg">
+          <h4 className="font-medium text-white mb-3 text-sm sm:text-base">Process Statistics</h4>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs sm:text-sm">
+            <div>
+              <span className="text-gray-400">Avg. Temperature:</span>
+              <div className="text-orange-400 font-mono">
+                {analyticsData.length > 0 
+                  ? (analyticsData.reduce((sum, d) => sum + d.temperature, 0) / analyticsData.length).toFixed(1)
+                  : '0.0'
+                }°C
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-400">Peak Power:</span>
+              <div className="text-yellow-400 font-mono">
+                {analyticsData.length > 0 
+                  ? Math.max(...analyticsData.map(d => d.powerConsumption)).toFixed(1)
+                  : processMetrics.powerConsumption.toFixed(1)
+                } kW
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-400">Total Volume:</span>
+              <div className="text-green-400 font-mono">
+                {(processMetrics.materialRemovalRate * 10).toFixed(2)} mm³
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-400">Uptime:</span>
+              <div className="text-blue-400 font-mono">
+                {analyticsData.length > 0 ? `${analyticsData.length}s` : '0s'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Predictions Panel */}
+      <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
       <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-        Prediction Results
+        AI Model Predictions
       </h3>
 
       {Object.keys(predictions).length === 0 ? (
@@ -134,6 +329,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ predictions, currentParamet
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
