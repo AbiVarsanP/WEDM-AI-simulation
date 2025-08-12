@@ -39,6 +39,16 @@ function App() {
   const [trainedModels, setTrainedModels] = useState<Record<string, ModelResult>>({});
   const [predictions, setPredictions] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState('parameters');
+  const [cuttingSpeed, setCuttingSpeed] = useState(1.0); // Default speed multiplier
+  const [analyticsData, setAnalyticsData] = useState<Array<{
+    timestamp: number;
+    progress: number;
+    materialRemovalRate: number;
+    powerConsumption: number;
+    surfaceQuality: number;
+    temperature: number;
+    efficiency: number;
+  }>>([]);
 
   // Calculate process metrics based on current parameters
   const processMetrics = useMemo(() => {
@@ -110,6 +120,33 @@ function App() {
     const prediction = model.predict(parameters);
     setPredictions(prev => ({ ...prev, [modelType]: prediction }));
   };
+
+  // Update analytics data periodically
+  React.useEffect(() => {
+    if (isSimulationRunning) {
+      const interval = setInterval(() => {
+        const timestamp = Date.now();
+        const progress = Math.random() * 100; // This would come from actual simulation
+        const newDataPoint = {
+          timestamp,
+          progress,
+          materialRemovalRate: processMetrics.materialRemovalRate + (Math.random() - 0.5) * 2,
+          powerConsumption: processMetrics.powerConsumption + (Math.random() - 0.5) * 0.5,
+          surfaceQuality: processMetrics.surfaceQuality + (Math.random() - 0.5) * 0.2,
+          temperature: 150 + Math.random() * 100,
+          efficiency: processMetrics.efficiency + (Math.random() - 0.5) * 10
+        };
+        
+        setAnalyticsData(prev => {
+          const updated = [...prev, newDataPoint];
+          // Keep only last 50 data points
+          return updated.slice(-50);
+        });
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isSimulationRunning, processMetrics]);
 
   const tabs = [
     { id: 'parameters', label: 'Parameters', icon: Settings },
@@ -279,6 +316,8 @@ function App() {
             <CuttingSimulation
               isRunning={isSimulationRunning}
               parameters={parameters}
+              cuttingSpeed={cuttingSpeed}
+              onCuttingSpeedChange={setCuttingSpeed}
               onToggleSimulation={handleToggleSimulation}
               onStopSimulation={handleStopSimulation}
             />
@@ -327,6 +366,8 @@ function App() {
             <ResultsPanel
               predictions={predictions}
               currentParameters={parameters}
+              analyticsData={analyticsData}
+              processMetrics={processMetrics}
             />
           )}
         </div>

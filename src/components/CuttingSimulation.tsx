@@ -6,6 +6,8 @@ import ShapeLibrary from './ShapeLibrary';
 interface SimulationProps {
   isRunning: boolean;
   parameters: any;
+  cuttingSpeed: number;
+  onCuttingSpeedChange: (speed: number) => void;
   onToggleSimulation: () => void;
   onStopSimulation: () => void;
 }
@@ -24,6 +26,8 @@ interface Point2D {
 const CuttingSimulation: React.FC<SimulationProps> = ({ 
   isRunning, 
   parameters, 
+  cuttingSpeed,
+  onCuttingSpeedChange,
   onToggleSimulation, 
   onStopSimulation 
 }) => {
@@ -340,7 +344,8 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
 
       // Update cutting progress
       if (isRunning && cutProgress.current < 100) {
-        const speed = Math.max(0.1, (parameters.speed || 2900) / 5000);
+        const baseSpeed = Math.max(0.05, (parameters.speed || 2900) / 15000); // Further reduced base speed
+        const speed = baseSpeed * cuttingSpeed; // Apply user speed multiplier
         cutProgress.current += speed;
         
         if (cutProgress.current >= 100) {
@@ -674,6 +679,31 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
       {/* Enhanced 3D Controls - Mobile Responsive */}
       <div className="mb-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Cutting Speed Control:</label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Speed Multiplier</span>
+              <span className="text-xs font-mono text-white bg-gray-700 px-2 py-1 rounded">
+                {cuttingSpeed.toFixed(1)}x
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0.1"
+              max="3.0"
+              step="0.1"
+              value={cuttingSpeed}
+              onChange={(e) => onCuttingSpeedChange(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>0.1x (Slow)</span>
+              <span>3.0x (Fast)</span>
+            </div>
+          </div>
+        </div>
+        
+        <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">Preset Shapes:</label>
           <div className="grid grid-cols-2 sm:flex gap-2">
             {Object.keys(shapes3D).map((shape) => (
@@ -813,7 +843,13 @@ const CuttingSimulation: React.FC<SimulationProps> = ({
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
           <div className="text-gray-300 mb-1">Cut Volume</div>
           <div className="text-orange-400 font-mono">
-            {((parameters.thickness || 4) * cutProgress.current * 0.5).toFixed(1)} mm³
+            {((parameters.thickness || 4) * cutProgress.current * 0.5 * cuttingSpeed).toFixed(1)} mm³
+          </div>
+        </div>
+        <div className="bg-gray-700 p-2 sm:p-3 rounded">
+          <div className="text-gray-300 mb-1">Speed Multiplier</div>
+          <div className="text-cyan-400 font-mono">
+            {cuttingSpeed.toFixed(1)}x
           </div>
         </div>
         <div className="bg-gray-700 p-2 sm:p-3 rounded">
