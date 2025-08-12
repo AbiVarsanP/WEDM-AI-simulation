@@ -4,6 +4,7 @@ import ParameterPanel from './components/ParameterPanel';
 import CuttingSimulation from './components/CuttingSimulation';
 import AIModelPanel from './components/AIModelPanel';
 import ResultsPanel from './components/ResultsPanel';
+import CuttingMethodSelector from './components/CuttingMethodSelector';
 import { trainSVM, trainANN, trainELM, trainGA, ModelResult } from './utils/aiModels';
 
 interface EDMParameters {
@@ -40,6 +41,7 @@ function App() {
   const [predictions, setPredictions] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState('parameters');
   const [cuttingSpeed, setCuttingSpeed] = useState(1.0); // Default speed multiplier
+  const [cuttingMethod, setCuttingMethod] = useState('wire'); // Default to Wire EDM
   const [analyticsData, setAnalyticsData] = useState<Array<{
     timestamp: number;
     progress: number;
@@ -209,10 +211,17 @@ function App() {
         <div className="space-y-6 sm:space-y-8">
           {activeTab === 'parameters' && (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-              <ParameterPanel
-                parameters={parameters}
-                onParameterChange={handleParameterChange}
-              />
+              <div className="space-y-6">
+                <CuttingMethodSelector
+                  selectedMethod={cuttingMethod}
+                  onMethodChange={setCuttingMethod}
+                />
+                <ParameterPanel
+                  parameters={parameters}
+                  cuttingMethod={cuttingMethod}
+                  onParameterChange={handleParameterChange}
+                />
+              </div>
               <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl">
                 <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Process Overview</h3>
                 <div className="space-y-3 sm:space-y-4">
@@ -316,6 +325,7 @@ function App() {
             <CuttingSimulation
               isRunning={isSimulationRunning}
               parameters={parameters}
+              cuttingMethod={cuttingMethod}
               cuttingSpeed={cuttingSpeed}
               onCuttingSpeedChange={setCuttingSpeed}
               onToggleSimulation={handleToggleSimulation}
@@ -368,6 +378,7 @@ function App() {
               currentParameters={parameters}
               analyticsData={analyticsData}
               processMetrics={processMetrics}
+              cuttingMethod={cuttingMethod}
             />
           )}
         </div>
