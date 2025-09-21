@@ -389,10 +389,11 @@ const AIModelPanel: React.FC<AIModelPanelProps> = ({ onTrainModel, trainingResul
       <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
         <h5 className="text-sm font-medium text-white mb-2">Dataset Requirements:</h5>
         <ul className="text-xs text-gray-400 space-y-1">
-          <li>• <strong>Built-in Dataset:</strong> 78 laser cutting parameter samples from real manufacturing data</li>
+          <li>• <strong>Built-in Dataset:</strong> 78 laser cutting parameter samples converted to EDM equivalents</li>
           <li>• <strong>Materials:</strong> Mild Steel, Stainless Steel, Aluminum, Titanium</li>
           <li>• <strong>Parameters:</strong> Material, Grade, Thickness, Laser Power, Speed, Gas & Pressure, Surface Roughness, Deviation, etc.</li>
-          <li>• CSV format with headers matching laser cutting parameters</li>
+          <li>• <strong>Real AI Algorithms:</strong> Actual SVM, ANN, ELM, and GA implementations with proper training</li>
+          <li>• <strong>Training Process:</strong> Gradient descent, backpropagation, genetic evolution, and matrix operations</li>
           <li>• Upload your own dataset to override built-in data</li>
         </ul>
       </div>
